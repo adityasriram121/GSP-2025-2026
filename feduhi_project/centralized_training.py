@@ -333,7 +333,7 @@ def train_centralized_model(data_path='data/combined_zone_data.csv', test_split=
     model_manager.save_centralized_model(
         model=predictor.model,
         metrics=metrics,
-        training_time=training_time,
+        training_time=predictor.training_time,
         config={'test_split': 0.2, 'epochs': 50}
     )
     

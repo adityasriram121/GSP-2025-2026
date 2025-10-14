@@ -237,16 +237,17 @@ class ModelManager:
             if centralized_models:
                 print(f"\n🧠 Centralized Models ({len(centralized_models)}):")
                 for model in sorted(centralized_models):
-                    model_path = os.path.join(self.centralized_dir, model)
-                    metadata_file = os.path.join(model_path, f"{model}_metadata.json")
+                    metadata_file = os.path.join(self.centralized_dir, f"{model}_metadata.json")
                     if os.path.exists(metadata_file):
                         try:
                             with open(metadata_file, 'r') as f:
                                 metadata = json.load(f)
-                            print(f"   📄 {model}: RMSE={metadata.get('metrics', {}).get('rmse', 'N/A'):.4f}°C")
-                        except:
+                            rmse = metadata.get('metrics', {}).get('rmse')
+                            rmse_str = f"{rmse:.4f}°C" if isinstance(rmse, (int, float)) else "N/A"
+                            print(f"   📄 {model}: RMSE={rmse_str}")
+                        except Exception:
                             print(f"   📄 {model}: (metadata unavailable)")
-        
+
         # List federated models
         if os.path.exists(self.federated_dir):
             federated_models = [d for d in os.listdir(self.federated_dir) if os.path.isdir(os.path.join(self.federated_dir, d))]
@@ -259,8 +260,10 @@ class ModelManager:
                         try:
                             with open(metadata_file, 'r') as f:
                                 metadata = json.load(f)
-                            print(f"   📄 {model}: RMSE={metadata.get('metrics', {}).get('loss', 'N/A'):.4f}°C")
-                        except:
+                            loss = metadata.get('metrics', {}).get('loss')
+                            loss_str = f"{loss:.4f}°C" if isinstance(loss, (int, float)) else "N/A"
+                            print(f"   📄 {model}: RMSE={loss_str}")
+                        except Exception:
                             print(f"   📄 {model}: (metadata unavailable)")
         
         # List reliable training results

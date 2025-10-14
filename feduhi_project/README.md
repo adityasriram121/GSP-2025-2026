@@ -4,6 +4,8 @@
 
 The **Federated Urban Heat Island (FedUHI)** project is a comprehensive simulation demonstrating how **Federated Learning (FL)** can be used to predict urban temperature hotspots while preserving data privacy. This project compares centralized machine learning with federated learning approaches in the context of urban climate monitoring.
 
+> 📘 **Looking for the full science-fair blueprint?** Read the companion report, [*A Revolutionary IT Science Fair Project: Mitigating Urban Heat Islands with a Privacy-Preserving Federated Learning Network on Low-Cost Edge Devices*](docs/feduhi_master_project_report.md). It covers the executive summary, hypothesis design, Raspberry Pi hardware build, and evaluation framework aligned with SDGs 11 and 13.
+
 ## 🏙️ Project Concept
 
 The project simulates four distinct urban zones, each representing different microclimates:

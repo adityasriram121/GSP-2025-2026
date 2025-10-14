@@ -304,3 +304,14 @@ For questions or issues:
 **Happy Learning! 🌡️🤖**
 
 *This project demonstrates the power of federated learning for privacy-preserving urban climate monitoring.*
+## ✏️ Editing Files Directly on GitHub
+
+You can update project files right from the GitHub web interface:
+
+1. Open the repository in your browser and navigate to the file you want to change.
+2. Click the **pencil icon** in the top-right of the file view to switch into edit mode.
+3. Make your edits in the online editor. You can use the **Preview** tab to review formatting changes such as Markdown.
+4. Scroll to the bottom of the page, add a short summary and optional description for your change, and choose whether to commit directly to a branch or open a pull request.
+5. Click **Commit changes** (for direct commits) or **Propose changes** to start a pull request, then follow the prompts to finish submitting your update.
+
+For more substantial edits or when working across multiple files, consider creating a new branch and opening a pull request so the changes can be reviewed before merging.

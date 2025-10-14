@@ -73,7 +73,8 @@ class FedUHIPipeline:
             'federated_training': {},
             'visualization': {}
         }
-        
+        self.results_dir = 'results'
+
         # Create necessary directories
         self._create_directories()
         
@@ -229,21 +230,28 @@ class FedUHIPipeline:
             
             print("📊 Estimating bandwidth usage...")
             bandwidth_estimate = estimate_bandwidth_usage(training_data, rounds=10)
-            
+
             print("🔄 Running federated simulation...")
             federated_results = run_federated_simulation(training_data, test_data, rounds=10)
-            
-            # Combine federated results
-            federated_results['bandwidth_estimate'] = bandwidth_estimate
-            
+
+            # Package federated results for downstream visualizations
+            federated_package = {
+                'results': federated_results,
+                'bandwidth_estimate': bandwidth_estimate
+            }
+
             # Save federated results
             with open('results/federated_results.pkl', 'wb') as f:
-                pickle.dump(federated_results, f)
-            
-            self.results['federated_training'] = federated_results
-            
+                pickle.dump(federated_package, f)
+
+            # Store flattened view for pipeline reporting
+            self.results['federated_training'] = {
+                **federated_results,
+                'bandwidth_estimate': bandwidth_estimate
+            }
+
             self._log_step("Step 3: Federated Training", step_start)
-            return federated_results
+            return self.results['federated_training']
             
         except Exception as e:
             print(f"❌ Error in federated training: {str(e)}")

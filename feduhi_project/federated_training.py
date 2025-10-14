@@ -390,14 +390,17 @@ def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int =
         config=fl.server.ServerConfig(num_rounds=rounds),
         strategy=strategy,
     )
-    
+
     training_time = time.time() - start_time
-    
+
     # Extract final metrics
     final_metrics = None
-    if hasattr(history, 'metrics_centralized') and history.metrics_centralized:
-        final_metrics = history.metrics_centralized.get('distributed', [])[-1][1]
-    
+    if history is not None and hasattr(history, 'metrics_centralized') and history.metrics_centralized:
+        metrics_centralized = history.metrics_centralized if isinstance(history.metrics_centralized, dict) else {}
+        distributed_metrics = metrics_centralized.get('distributed', [])
+        if isinstance(distributed_metrics, list) and distributed_metrics:
+            final_metrics = distributed_metrics[-1][1]
+
     results = {
         'training_time': training_time,
         'rounds': rounds,
@@ -508,12 +511,15 @@ def main():
         }, f)
     
     # Save the final federated model if available
-    if hasattr(history, 'model') and history.model is not None:
+    history = results.get('history') if isinstance(results, dict) else None
+    if history is not None and hasattr(history, 'model') and history.model is not None:
         try:
             history.model.save('models/federated_model')
             print("Saved final federated model to models/federated_model")
         except Exception as e:
             print(f"Warning: Could not save federated model: {e}")
+    else:
+        print("Final federated model was not provided by the Flower history object; skipping model save.")
     
     print("\nFederated training completed successfully!")
     print("Results saved to 'results/federated_results.pkl'")

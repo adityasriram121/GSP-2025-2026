@@ -15,6 +15,8 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import flwr as fl
+from flwr.client import Client
+from flwr.common import Context
 import time
 import os
 import pickle
@@ -66,7 +68,8 @@ class FederatedTemperatureClient(fl.client.NumPyClient):
     def _build_model(self) -> tf.keras.Model:
         """Build the neural network model (same architecture as centralized)."""
         model = tf.keras.Sequential([
-            tf.keras.layers.Dense(64, activation='relu', input_shape=(self.X_train_scaled.shape[1],)),
+            tf.keras.layers.Input(shape=(self.X_train_scaled.shape[1],)),
+            tf.keras.layers.Dense(64, activation='relu'),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Dense(32, activation='relu'),
             tf.keras.layers.Dropout(0.1),
@@ -333,7 +336,7 @@ def prepare_federated_data(data_dir: str = 'data') -> Tuple[Dict, Dict]:
     return training_data, test_data
 
 
-def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int = 10) -> Dict:
+def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int = 5) -> Dict:
     """
     Run federated learning simulation.
     
@@ -350,16 +353,17 @@ def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int =
     _global_training_data = training_data
     _global_test_data = test_data
     
-    def create_client_fn(cid: str) -> FederatedTemperatureClient:
-        """Create a federated client."""
+    def create_client_fn(context: Context) -> Client:
+        """Create a federated client compatible with modern Flower APIs."""
         zone_names = list(training_data.keys())
+        cid = context.node_config.get("cid", context.node_id)
         zone_idx = int(cid) % len(zone_names)
         zone_name = zone_names[zone_idx]
-        
+
         X_train, y_train = _global_training_data[zone_name]
         X_test, y_test = _global_test_data[zone_name]
-        
-        return FederatedTemperatureClient(
+
+        client = FederatedTemperatureClient(
             zone_name=zone_name,
             X_train=X_train,
             y_train=y_train,
@@ -367,6 +371,8 @@ def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int =
             y_test=y_test,
             cid=int(cid)
         )
+
+        return client.to_client()
     
     # Configure federated learning strategy
     strategy = fl.server.strategy.FedAvg(
@@ -389,9 +395,18 @@ def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int =
         num_clients=len(training_data),
         config=fl.server.ServerConfig(num_rounds=rounds),
         strategy=strategy,
+        client_resources={"num_cpus": 1},
     )
 
     training_time = time.time() - start_time
+
+    # Ensure Ray shuts down cleanly to release resources for subsequent steps
+    try:
+        import ray
+
+        ray.shutdown()
+    except Exception:
+        pass
 
     # Extract final metrics
     final_metrics = None
@@ -414,7 +429,7 @@ def run_federated_simulation(training_data: Dict, test_data: Dict, rounds: int =
     return results
 
 
-def estimate_bandwidth_usage(training_data: Dict, rounds: int = 10) -> Dict:
+def estimate_bandwidth_usage(training_data: Dict, rounds: int = 5) -> Dict:
     """
     Estimate bandwidth usage for federated learning.
     
@@ -475,14 +490,15 @@ def main():
     
     # Estimate bandwidth usage
     print("\nEstimating bandwidth usage...")
-    bandwidth_estimate = estimate_bandwidth_usage(training_data, rounds=10)
+    rounds_used = 5
+    bandwidth_estimate = estimate_bandwidth_usage(training_data, rounds=rounds_used)
     print(f"Model size: {bandwidth_estimate['model_size_mb']:.2f} MB")
     print(f"Bandwidth per round: {bandwidth_estimate['bytes_per_round_mb']:.2f} MB")
-    print(f"Total bandwidth (10 rounds): {bandwidth_estimate['total_bytes_mb']:.2f} MB")
+    print(f"Total bandwidth ({rounds_used} rounds): {bandwidth_estimate['total_bytes_mb']:.2f} MB")
     
     # Run federated simulation
     print("\nRunning federated learning simulation...")
-    results = run_federated_simulation(training_data, test_data, rounds=10)
+    results = run_federated_simulation(training_data, test_data, rounds=rounds_used)
     
     # Print results
     print("\n" + "="*50)

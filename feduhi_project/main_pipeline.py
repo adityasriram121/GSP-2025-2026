@@ -15,6 +15,7 @@ Usage: python main_pipeline.py
 import os
 import sys
 import time
+import math
 import pickle
 import traceback
 import subprocess
@@ -71,7 +72,8 @@ class FedUHIPipeline:
             'data_generation': {},
             'centralized_training': {},
             'federated_training': {},
-            'visualization': {}
+            'visualization': {},
+            'model_selection': None
         }
         self.results_dir = 'results'
 
@@ -315,11 +317,116 @@ class FedUHIPipeline:
             print(f"❌ Error in visualization: {str(e)}")
             traceback.print_exc()
             raise
+
+    def determine_preferred_training(self):
+        """Determine which training approach currently performs best."""
+        centralized = self.results.get('centralized_training') or {}
+        federated = self.results.get('federated_training') or {}
+
+        if not centralized or not federated:
+            print("⚠️ Unable to determine preferred model: missing results")
+            return None
+
+        centralized_metrics = centralized.get('metrics') or {}
+        federated_metrics = federated.get('final_metrics') or {}
+
+        if not centralized_metrics and not federated_metrics:
+            print("⚠️ No metrics available to compare models")
+            return None
+
+        # Extract comparable metrics
+        centralized_mae = centralized_metrics.get('mae')
+        centralized_rmse = centralized_metrics.get('rmse')
+        centralized_time = centralized.get('training_time')
+
+        federated_mae = federated_metrics.get('mae')
+        federated_rmse = None
+        if 'mse' in federated_metrics:
+            federated_rmse = math.sqrt(federated_metrics['mse'])
+        federated_time = federated.get('training_time')
+        federated_bandwidth = None
+        bandwidth_details = federated.get('bandwidth_estimate') or {}
+        if bandwidth_details:
+            federated_bandwidth = bandwidth_details.get('total_bytes_mb')
+
+        preferred = None
+        rationale = []
+
+        if centralized_mae is not None and federated_mae is not None:
+            if federated_mae < centralized_mae:
+                preferred = 'federated'
+                improvement = (centralized_mae - federated_mae) / centralized_mae * 100 if centralized_mae else None
+                if improvement is not None:
+                    rationale.append(f"Federated MAE improved by {improvement:.1f}% compared to centralized")
+            elif centralized_mae < federated_mae:
+                preferred = 'centralized'
+                degradation = (federated_mae - centralized_mae) / federated_mae * 100 if federated_mae else None
+                if degradation is not None:
+                    rationale.append(f"Centralized MAE is {degradation:.1f}% lower than federated")
+            else:
+                rationale.append("MAE is equivalent across approaches")
+
+        if preferred is None and centralized_rmse is not None and federated_rmse is not None:
+            if federated_rmse < centralized_rmse:
+                preferred = 'federated'
+                improvement = (centralized_rmse - federated_rmse) / centralized_rmse * 100 if centralized_rmse else None
+                if improvement is not None:
+                    rationale.append(f"Federated RMSE improved by {improvement:.1f}%")
+            elif centralized_rmse < federated_rmse:
+                preferred = 'centralized'
+                improvement = (federated_rmse - centralized_rmse) / federated_rmse * 100 if federated_rmse else None
+                if improvement is not None:
+                    rationale.append(f"Centralized RMSE improved by {improvement:.1f}%")
+
+        # If accuracy is tied, prefer faster training for operational simplicity
+        if preferred is None and centralized_time is not None and federated_time is not None:
+            if centralized_time < federated_time:
+                preferred = 'centralized'
+                rationale.append("Training time is faster for centralized model")
+            elif federated_time < centralized_time:
+                preferred = 'federated'
+                rationale.append("Training time is faster for federated model")
+
+        # Consider bandwidth savings when accuracy is similar
+        if preferred == 'federated' and federated_bandwidth is not None:
+            rationale.append(f"Federated training used approximately {federated_bandwidth:.2f} MB of bandwidth")
+
+        selection_summary = {
+            'preferred': preferred,
+            'centralized': {
+                'mae': centralized_mae,
+                'rmse': centralized_rmse,
+                'training_time': centralized_time,
+            },
+            'federated': {
+                'mae': federated_mae,
+                'rmse': federated_rmse,
+                'training_time': federated_time,
+                'bandwidth_mb': federated_bandwidth,
+            },
+            'rationale': rationale,
+        }
+
+        self.results['model_selection'] = selection_summary
+
+        if preferred:
+            print("\n🏆 Preferred Training Approach:")
+            print(f"   → {preferred.title()} model is recommended based on current metrics")
+            for detail in rationale:
+                print(f"     - {detail}")
+        else:
+            print("\nℹ️ No clear preference detected between centralized and federated models")
+
+        return selection_summary
     
     def generate_final_report(self):
         """Generate final pipeline execution report."""
         total_time = self.end_time - self.start_time
-        
+
+        # Ensure preferred model is determined before reporting
+        if not self.results.get('model_selection'):
+            self.determine_preferred_training()
+
         print("\n" + "="*80)
         print("🎯 FEDUHI PIPELINE EXECUTION REPORT")
         print("="*80)
@@ -351,6 +458,14 @@ class FedUHIPipeline:
         if self.results['visualization']:
             viz_results = self.results['visualization']
             print(f"✅ Visualization: {len(viz_results['plots_created'])} plots and reports generated")
+
+        # Preferred model summary
+        selection = self.results.get('model_selection')
+        if selection and selection.get('preferred'):
+            print("\n🏆 RECOMMENDED TRAINING APPROACH:")
+            print(f"   Preferred: {selection['preferred'].title()} model")
+            for detail in selection.get('rationale', []):
+                print(f"   - {detail}")
         
         print("\n📁 OUTPUT FILES:")
         print("-" * 50)

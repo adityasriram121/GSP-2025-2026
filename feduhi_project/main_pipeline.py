@@ -20,16 +20,18 @@ import pickle
 import traceback
 import subprocess
 from datetime import datetime
+from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
 def install_requirements():
     """Install required packages automatically."""
-    requirements_file = 'requirements.txt'
-    if os.path.exists(requirements_file):
+    project_root = Path(__file__).resolve().parent
+    requirements_file = project_root / 'requirements.txt'
+    if requirements_file.exists():
         print("📦 Installing required packages...")
         try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_file])
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', str(requirements_file)])
             print("✅ All requirements installed successfully!")
         except subprocess.CalledProcessError as e:
             print(f"❌ Error installing requirements: {e}")

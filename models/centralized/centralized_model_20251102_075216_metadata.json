@@ -1,0 +1,28 @@
+{
+  "model_type": "centralized",
+  "timestamp": "20251102_075216",
+  "model_path": "models\\centralized\\centralized_model_20251102_075216",
+  "metrics": {
+    "mse": 3.1895322319818695,
+    "rmse": 1.785926155243231,
+    "mae": 1.425339815619601,
+    "r2": 0.9249127499893482
+  },
+  "training_time": 16.152743577957153,
+  "config": {
+    "test_split": 0.2,
+    "epochs": 50
+  },
+  "architecture": {
+    "layers": 6,
+    "total_params": 3265,
+    "input_shape": [
+      null,
+      9
+    ],
+    "output_shape": [
+      null,
+      1
+    ]
+  }
+}

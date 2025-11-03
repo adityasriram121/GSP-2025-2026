@@ -1,0 +1,48 @@
+{
+  "model_type": "federated",
+  "timestamp": "20251102_080820",
+  "model_path": "models\\federated\\federated_model_20251102_080820",
+  "metrics": {
+    "loss": 0.1157570593059063,
+    "mae": 0.26441601291298866,
+    "r2": 0.882106036647743
+  },
+  "training_time": 145.15692329406738,
+  "config": {
+    "rounds": 10
+  },
+  "bandwidth_info": {},
+  "architecture": {
+    "weights_shape": [
+      [
+        5,
+        64
+      ],
+      [
+        64
+      ],
+      [
+        64,
+        32
+      ],
+      [
+        32
+      ],
+      [
+        32,
+        16
+      ],
+      [
+        16
+      ],
+      [
+        16,
+        1
+      ],
+      [
+        1
+      ]
+    ],
+    "total_parameters": 3009
+  }
+}
